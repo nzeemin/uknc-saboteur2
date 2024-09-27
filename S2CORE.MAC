@@ -26,11 +26,6 @@
 	NOP
 .ENDM
 
-; Режимы для регистра управления памятью БК
-;          .___1___...00.00	Стр.	Назначение
-MMODE1 = ^B0011100000000000	; 3:1  -  основной
-MMODE5 = ^B0001100000000000	; 5:1  -  для рисования на экране at 040000-077777 window
-
 	.=001000
 STCORE::
 K01000:
@@ -229,7 +224,7 @@ K02202:	MOV	#K41173, R3		; FFCOL
 	MOV	#L26524, K04654		; BUFFO - Front tile screen address
 	MOV	#L25424, R3		; BUFFB - Back tile screen address
 	MOV	#L24324, R2		; BUFFD
-	MOV	#040000, R5		; screen start address
+	MOV	#100000, R5		; screen start address
 	MOV	#L24324, R4		; BUFFD
 K02272:	MOV	#000022, #000000	;!!MUT-2ndARG!!
 ; LOOP1:
@@ -628,40 +623,40 @@ K04274:	MOV	#K04662, R3		; PIX
 	MOV	R5, (R1)		; косвенный адрес УКНЦ
 	MOV	#176642, R5
 	CLR	R0			; #0
-	MOVB	(R3)+, R0
+	BISB	(R3)+, R0
 	MOV	R0, (R5)
 	ADD	#120, (R1)
 	CLR	R0			; #1
-	MOVB	(R3)+, R0
+	BISB	(R3)+, R0
 	MOV	R0, (R5)
 	ADD	#120, (R1)
 	CLR	R0			; #2
-	MOVB	(R3)+, R0
+	BISB	(R3)+, R0
 	MOV	R0, (R5)
 	ADD	#120, (R1)
 	CLR	R0			; #3
-	MOVB	(R3)+, R0
+	BISB	(R3)+, R0
 	MOV	R0, (R5)
 	ADD	#120, (R1)
 	MOV	R0, (R5)		; Дублируем строку в середине тайла
 	ADD	#120, (R1)
 	CLR	R0			; #4
-	MOVB	(R3)+, R0
+	BISB	(R3)+, R0
 	MOV	R0, (R5)
 	ADD	#120, (R1)
 	CLR	R0			; #5
-	MOVB	(R3)+, R0
+	BISB	(R3)+, R0
 	MOV	R0, (R5)
 	ADD	#120, (R1)
 	CLR	R0			; #6
-	MOVB	(R3)+, R0
+	BISB	(R3)+, R0
 	MOV	R0, (R5)
 	ADD	#120, (R1)
 	CLR	R0			; #7
-	MOVB	(R3)+, R0
+	BISB	(R3)+, R0
 	MOV	R0, (R5)
-	ADD	#120, (R1)
-	MOV	R0, (R5)		; Дублируем нижнюю строку тайла
+	NOP2	;ADD	#120, (R1)
+	NOP1	;MOV	R0, (R5)		; Дублируем нижнюю строку тайла
 	;MOVB	(R3), R0		; get attr
 	POP	R5
 K04440:	INC	R5			; next column
@@ -678,7 +673,7 @@ K04440:	INC	R5			; next column
 	DEC	R1
 	BEQ	K04506
 	JMP	K02304			; => LOOP2
-K04506:	ADD	#001100, R5
+K04506:	ADD	#001140, R5
 	DEC	<K02272+4>
 	BEQ	K04632			; Z => RETURN
 	JMP	K02300			; => LOOP1
@@ -756,7 +751,8 @@ K04762:	MOVB	R0, (R3)+		; <
 	INC	R3
 	ADD	#000070, R3
 	SOB	R1, K04762		; repeat
-	MOV	#MMODE1, @#177716	; Включаем режим памяти 1
+	HALT	;MOV	#MMODE1, @#177716	; Включаем режим памяти 1
+	NOP2
 	NOP3
 	CALL	L10300			; MONYP - Print MONEY
 	CLR	R0
@@ -1054,7 +1050,7 @@ K11600:	PUSH	R3			;   <
 	INC	R4
 	BIT	#000037, R4
 	BNE	K11626
-	ADD	#001100, R2
+	ADD	#001140, R2
 K11626:	SOB	R1, K11600		;   repeat
 	BR	K11516			; repeat
 ; Procedure: Show one tile of the indicator panel
@@ -3237,7 +3233,7 @@ K33124:	MOV	#K36207, R3		; TIMER counter address
 	BNE	K33232
 	PUSH	R0
 	PUSH	R3
-	MOV	#050146, R2		; screen address
+	MOV	#110146, R2		; screen address
 	MOV	#K33446, R3		; "TIME IS SHORT "
 	MOV	#000016, R1		; 14.
 	CALL	K01704			; PRINT string
@@ -3247,7 +3243,7 @@ K33232:	CMPB	R0, #057		; less than '0' ?
 	BNE	K33250
 	MOVB	#002, K33540		; set DEAD = 2
 	BR	K33270
-K33250:	MOV	#050226, R2		; screen address
+K33250:	MOV	#110226, R2		; screen address
 	MOV	#K36204, R3		; TIMER value 3-char
 	MOV	#000003, R1		; 3.
 	CALL	K01704			; PRINT string
@@ -3811,14 +3807,14 @@ K41000:	MOVB	046775, K01602		; room number
 K41074:	CLR	R0			; < значение для порта 177716 БК
 	MOV	#100, R2		;   бит звука
 K41100:	XOR	R2, R0
-	MOV	R0, @#177716
+	NOP2	;MOV	R0, @#177716
 	XOR	R2, R0
-	MOV	R0, @#177716
+	NOP2	;MOV	R0, @#177716
 	CLR	R0
 	XOR	R2, R0
-	MOV	R0, @#177716
+	NOP2	;MOV	R0, @#177716
 	XOR	R2, R0
-	MOV	R0, @#177716
+	NOP2	;MOV	R0, @#177716
 	SOB	R5, K41074		; repeat
 	NOP3
 ;
@@ -3844,7 +3840,7 @@ K41176:	PUSH	R3
 ; Read joystick and map it
 ; Используем 2-ю колонку таблицы K41305 как бит-признак, 3-я колонка даёт бит результата
 	CLR	R0
-	MOVB	@#177714, R1	;БК	; Читаем состояние джойстика
+	NOP2	;MOVB	@#177714, R1	;БК	; Читаем состояние джойстика
 10$:	INC	R3
 	TSTB	(R3)			; конец таблицы?
 	BEQ	K41300
@@ -3855,9 +3851,9 @@ K41176:	PUSH	R3
 	BR	10$
 ; If we have a key pressed, go through key mapping table
 K41232:
-	TSTB	@#177660	;БК	; do we have an unprocessed key?
-	BPL	K41276		;БК	; no => jump
-	MOVB	@#177662, R0	;БК	; get the key
+	TSTB	@#177560		; do we have an unprocessed key?
+	BPL	K41276			; no => jump
+	MOVB	@#177562, R0		; get the key
 	MOV	#000011, R1		; 9.
 K41256:	CMPB	(R3)+, R0		; <  matches the key?
 	BNE	K41270			; |  no => jump
@@ -5057,7 +5053,7 @@ L10554:	POP	R4
 ;
 ; Clear 1024.*8.*2. = 16K bytes on the screen
 K01224:	MOV	#000000, R0		; Filler value  !!MUT-ARG!!
-	MOV	#002000, R1		; 1024.
+	MOV	#<240.*10.>, R1		; 240. строк
 	MOV	#176640, R2		; Адрес порта адреса косвенной записи УКНЦ
 	MOV	#176642, R5		; Адрес порта данных косвенной записи УКНЦ
 	MOV	#100000, (R2)		; Screen start address
@@ -5500,7 +5496,8 @@ L13312:	HALT	;MOV	#MMODE5, @#177716	; Включаем режим памяти 5
 	ADD	#000100, R2
 	MOVB	R0, (R2)		; #7
 	ADD	#000100, R2
-	MOV	#MMODE1, @#177716	; Включаем режим памяти 1
+	HALT	;MOV	#MMODE1, @#177716	; Включаем режим памяти 1
+	NOP2
 	RETURN
 	NOP3
 ; NOCOL procedure: Clear Menu selection
@@ -5607,21 +5604,22 @@ L14506:	MOV	#000000, R2		;!!MUT-ARG!!
 	ADD	R2, R3
 ; NRGPX:
 L14534:	MOVB	#000, R5		;!!MUT-ARG!!
-	ASL	R5			;
-	MOV	PXCONH(R5), R5		;
+	NOP1	;ASL	R5			;
+	NOP2	;MOV	PXCONH(R5), R5		;
 	MOV	#000012, R1		; 8. NOTE: Увеличено для БК
-	HALT	;MOV	#MMODE5, @#177716	; Включаем режим памяти 5
+	NOP1	;MOV	#MMODE5, @#177716	; Включаем режим памяти 5
 	NOP2
 L14560:	MOV	(R3), R0		; <
 	XOR	R5, R0
-	MOV	R0, (R3)
+	NOP1	;MOV	R0, (R3)	;TODO
 	MOV	(R2), R0
 	XOR	R5, R0
-	MOV	R0, (R2)
+	NOP1	;MOV	R0, (R2)	;TODO
 	ADD	#000100, R2		; next line
 	ADD	#000100, R3
 	SOB	R1, L14560		; repeat
-	MOV	#MMODE1, @#177716	; Включаем режим памяти 1
+	NOP1	;MOV	#MMODE1, @#177716	; Включаем режим памяти 1
+	NOP2
 	NOP3
 	MOV	#<L14534+2>, R3
 	ASLB	(R3)
@@ -5767,13 +5765,13 @@ L15650:	MOV	#000144, R1		; 100.
 	CLR	R0			; значение для порта 177716 БК
 	MOV	#100, R2		; бит звука
 L15674:	XOR	R2, R0
-	MOV	R0, @#177716
-	MOVB	(R3)+, K01604
-L15722:	DECB	K01604
+	NOP2	;MOV	R0, @#177716
+	NOP2	;MOVB	(R3)+, K01604
+L15722:	NOP2	;DECB	K01604
 	NOP
-	BNE	L15722
-	XOR	R2, R0
-	MOV	R0, @#177716
+	NOP1	;BNE	L15722
+	NOP1	;XOR	R2, R0
+	NOP2	;MOV	R0, @#177716
 	SOB	R1, L15674		; repeat
 	RETURN
 	NOP3
@@ -5814,10 +5812,6 @@ L27624 = 127624			; BUFFN - Ninja tile screen address
 L30724 = 130724			; BUFFG1 - Enemy 0 tile screen address
 ; Tile screen 32x18 = 576. bytes
 L32024 = 132024			; BUFFG2 - Enemy 1 tile screen address
-
-; Таблица под расширение байта в слово для вывода на экран
-L33124 = 133124
-PXCONH = L33124 + <128.*2.>	; Середина таблицы конвертации
 
 ;------------------------------------------------------------------------------
 	.END	STCORE
