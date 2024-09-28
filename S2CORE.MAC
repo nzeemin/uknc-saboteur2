@@ -737,24 +737,23 @@ K04674:	PUSH	R3
 	MOV	#000005, R1		; 5.
 K04724:	BICB	#177600, (R3)+		; <
 	SOB	R1, K04724		; repeat
+;TODO: Не понял что это, изменение 4-х атрибутов, для чего?
 	MOV	#123477, R3		; screen address
 	MOV	#000010, R1
-	MOV	#000017, R0
-	HALT	;MOV	#MMODE5, @#177716	; Включаем режим памяти 5
-	NOP2
+	MOV	#000017, R0		; attr?
+	NOP3	;MOV	#MMODE5, @#177716	; Включаем режим памяти 5
 	NOP3
-K04762:	MOVB	R0, (R3)+		; <
-	INC	R3
-	MOVB	R0, (R3)+
-	INC	R3
-	MOVB	R0, (R3)+
-	INC	R3
-	MOVB	R0, (R3)+
-	INC	R3
-	ADD	#000070, R3
+K04762:	NOP1	;MOVB	R0, (R3)+		; <
+	NOP1	;INC	R3
+	NOP1	;MOVB	R0, (R3)+
+	NOP1	;INC	R3
+	NOP1	;MOVB	R0, (R3)+
+	NOP1	;INC	R3
+	NOP1	;MOVB	R0, (R3)+
+	NOP1	;INC	R3
+	NOP2	;ADD	#000070, R3
 	SOB	R1, K04762		; repeat
-	HALT	;MOV	#MMODE1, @#177716	; Включаем режим памяти 1
-	NOP2
+	NOP3	;MOV	#MMODE1, @#177716	; Включаем режим памяти 1
 	NOP3
 	CALL	L10300			; MONYP - Print MONEY
 	CLR	R0
@@ -2307,9 +2306,9 @@ K25362:	MOVB	077520, R0
 	MOVB	R0, 077520
 	ASL	R0
 	MOV	077506(R0), 077516
-	MOVB	077530, R0
+	MOVB	K77530, R0		; get DLGP1
 	INCB	R0
-	CMPB	R0, #000003
+	CMPB	R0, #003
 	BNE	K25426
 	CLR	R0
 K25426:	MOVB	R0, 077530
@@ -2690,7 +2689,8 @@ K27732:	POP	R3
 K27734:	DECB	(R3)
 	BNE	K27744
 	CLRB	000013(R4)
-K27744:	MOV	#076606, R3
+; LEEEE:
+K27744:	MOV	#076606, R3		; GDPNC
 	JMP	K30450			; => ENDGP
 ; FFIRE:
 K27754:	.BYTE	243, 244
@@ -3120,25 +3120,27 @@ K32422:	SEC
 	ROLB	(R4)
 	SUB	#003300, R3
 	MOVB	#001, (R3)
-;
+; NDOMS:
 K32436:	ADD	#000007, R4
 	MOVB	K32300, R0		; get MSLNO
 	DECB	R0
 	BEQ	K32456
 	JMP	K31722
 K32456:	TSTB	K36214			; check RMDN room level
-	BNE	K32542			; not 0 =>
+	BNE	K32542			; not 0 (top) =>
+; We're on the top room level
 	MOVB	K36210, R2		; get MANA
 	ADD	#000060, R2
 	ADD	#000156, R2
-	MOV	R2, K40276
-	MOVB	#005, 040300
-	MOV	#K40301, R2
+	MOV	R2, K40276		; set GLIPS
+	MOVB	#005, K40300		; set GLIDN = 5
+	MOV	#K40301, R2		; GLIDC
 	MOV	#L26524, R1		; BUFFO Front tile screen address
 	CALL	K40356			; DRGLI
-	MOV	#K46162, R2
+	MOV	#K46162, R2		; NINDC
 	MOV	#L24324, R1		; BUFFD
 	CALL	K40356			; DRGLI
+; PICRT:
 K32542:	TSTB	014640
 	BEQ	K32736
 	MOV	#K14641, R4		; TVCNT
@@ -3712,20 +3714,20 @@ K40301:	.BYTE	377
 	.BYTE	135, 377, 377, 377, 377, 136, 137, 377, 140, 141
 	.BYTE	377, 377, 377, 000
 ;
-; DRGLI procedure: ??
-K40356:	MOV	#K40276, 047720
-	MOV	040276, R3
+; DRGLI procedure: Draw glider; R1 = addr in tile screen, R2 = GLIDC or NINDC
+K40356:	MOV	#K40276, 047720		; GLIPS addr -> (HELP1+1)
+	MOV	K40276, R3		; get GLIPS
 	ADD	R1, R3
-	MOV	#000004, R1
-	MOVB	#000013, K01604
-	MOVB	040300, K01607
+	MOV	#000004, R1		; height = 4
+	MOVB	#013, K01604		; width = 11.
+	MOVB	K40300, K01607
 	MOVB	K36210, R0		; get MANA
 	SUB	#000002, R0
 	CALL	K47660			; DRWOB
-K40426:	MOV	#K36212, 047720		; MANPS address
+K40426:	MOV	#K36212, 047720		; MANPS addr -> (HELP1+1)
 	RETURN
 ; DRBIK procedure
-K40436:	MOV	#K17202, 047720		; BIKPS addr ->
+K40436:	MOV	#K17202, 047720		; BIKPS addr -> (HELP1+1)
 	MOV	K36212, R3		; get MANPS
 	ADD	#000076, R3
 	MOV	R3, K17202		; set BIKPS
@@ -4941,7 +4943,7 @@ L07676:	INC	R3
 	BR	L07666
 ; DRWPC:
 L07710:	PUSH	R4
-	MOV	#100025, R3
+	MOV	#100031, R3		; screen address
 	MOV	#L24324, R2		; BUFFD Address with prepared picture
 	MOV	#000013, R1
 L07742:	MOV	#000030, R4		; <
@@ -5472,28 +5474,20 @@ L13242:	MOV	R2, #000000		;!!MUT-ARG!!
 	NOP1
 ;
 ; Procedure: Set attributes for 8x8 block; R0 = attribute, R2 = screen address
-L13312:	HALT	;MOV	#MMODE5, @#177716	; Включаем режим памяти 5
-	NOP2
-	NOP1
-	MOVB	R0, (R2)		; #0
-	ADD	#000100, R2
-	MOVB	R0, (R2)		; #1
-	ADD	#000100, R2
-	MOVB	R0, (R2)		; #2
-	ADD	#000100, R2
-	MOVB	R0, (R2)		; #3
-	ADD	#000100, R2
-	MOVB	R0, (R2)		; #4
-	ADD	#000100, R2
-	MOVB	R0, (R2)		; #5
-	ADD	#000100, R2
-	MOVB	R0, (R2)		; #6
-	ADD	#000100, R2
-	MOVB	R0, (R2)		; #7
-	ADD	#000100, R2
-	HALT	;MOV	#MMODE1, @#177716	; Включаем режим памяти 1
-	NOP2
+L13312:
+	MOV	R2, @#176640		; УКНЦ
+	MOVB	R0, @#176642		; #0
+	ADD	#<120*7>, R2
+	MOV	R2, @#176640		; УКНЦ
+	MOVB	R0, @#176642		; #0
 	RETURN
+	NOP3
+	NOP3
+	NOP3
+	NOP3
+	NOP3
+	NOP3
+	NOP3
 	NOP3
 ; NOCOL procedure: Clear Menu selection
 L13424:	CLR	R0			; filler = 0
@@ -5595,27 +5589,20 @@ L14506:	MOV	#000000, R2		;!!MUT-ARG!!
 	PUSH	R4
 	CALL	K02056			; screen coords R2 to screen address
 	POP	R4
-	MOV	#001200, R3
+	MOV	#800., R3
 	ADD	R2, R3
 ; NRGPX:
 L14534:	MOVB	#000, R5		;!!MUT-ARG!!
-	NOP1	;ASL	R5			;
-	NOP2	;MOV	PXCONH(R5), R5		;
-	MOV	#000012, R1		; 8. NOTE: Увеличено для БК
-	NOP1	;MOV	#MMODE5, @#177716	; Включаем режим памяти 5
-	NOP2
-L14560:	MOV	(R3), R0		; <
-	XOR	R5, R0
-	NOP1	;MOV	R0, (R3)	;TODO
-	MOV	(R2), R0
-	XOR	R5, R0
-	NOP1	;MOV	R0, (R2)	;TODO
-	ADD	#000100, R2		; next line
-	ADD	#000100, R3
+	MOV	#000012, R1		; 10. NOTE: Увеличено для БК/УКНЦ
+	MOVB	L23024(R5), R5		; mirror byte для УКНЦ
+	BIC	#177400, R5		; УКНЦ оставляем байт
+L14560:	MOV	R3, @#176640	; УКНЦ
+	XOR	R5, @#176642	; УКНЦ
+	MOV	R2, @#176640	; УКНЦ
+	XOR	R5, @#176642	; УКНЦ
+	ADD	#000120, R2		; next line
+	ADD	#000120, R3
 	SOB	R1, L14560		; repeat
-	NOP1	;MOV	#MMODE1, @#177716	; Включаем режим памяти 1
-	NOP2
-	NOP3
 	MOV	#<L14534+2>, R3
 	ASLB	(R3)
 	BHIS	L14664			; => NRGC1
@@ -5629,6 +5616,8 @@ L14560:	MOV	(R3), R0		; <
 	MOVB	#001, K33540		; set DEAD = 1
 	CLRB	<L14472+2>		; clear (DECEN+1)
 	RETURN
+	NOP3
+	NOP3
 ; NRGC1:
 L14664:	POP	R5
 	POP	R1
