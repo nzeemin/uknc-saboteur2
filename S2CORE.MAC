@@ -65,6 +65,7 @@ GAMESC:	; Строка подготовки игрового экрана
 	.BYTE	33,241,60	; Цвет знакоместа 0
 	.BYTE	33,242,60	; Цвет фона 0
 	.BYTE	14		; Clear screen
+	.BYTE	033,131,65,40	; Курсор в позицию
 	.BYTE	0
 EXITSC:	; Строка очистки экрана перед выходом
 	.BYTE	33,246,061	; Формат экрана 80x24
@@ -76,7 +77,7 @@ EXITSC:	; Строка очистки экрана перед выходом
 
 	.EVEN
 
-	.BLKW	156	;NOTE: Свободное место
+	.BLKW	154	;NOTE: Свободное место
 
 ;------------------------------------------------------------------------------
 ;
@@ -183,31 +184,32 @@ K02044:	SOB	R1, K01716		; repeat
 	RETURN
 ;
 ; Procedure: Screen coords R2 to screen address
+; Screen coords word: [0  1  0  Y7 Y6 Y2 Y1 Y0 | Y5 Y4 Y3 X4 X3 X2 X1 X0]
+; Для УКНЦ мы игнорируем Y2 Y1 Y0, а в целом Y умножаем на 800. = 10. строк по 80.
 K02056:	MOV	R2, R4
-	BIC	#177740, R4		; 0..31.
-	BIC	#160037, R2
-K02070:	MOV	R2, #000000		;!!MUT-ARG!!
-	SWAB	R2
-	BIC	#177770, R2		; 0..7
+	BIC	#177740, R4		; X = 0..31.
+	BIC	#163437, R2		; 1110011100011111
+	MOVB	R2, @#<10$+2>
+	BICB	#163777, R2		; 1110011111111111 keep Y7 Y6
+	ASR	R2
+	ASR	R2
+	ASR	R2			; R2 = [0  0  0  0  0  0  0  Y7 Y6 | 0  0  0  0  0  0  0  0 ]
+10$:	BISB	#000000, R2		; R2 = [0  0  0  0  0  0  0  Y7 Y6 | Y5 Y4 Y3 0  0  0  0  0 ] = Y * 32.
+	MOV	R2, @#<20$+2>
 	ASL	R2
+	ASL	R2			; R2 = Y * 128.
+20$:	ADD	#000000, R2		; R2 = Y * 160.
+	MOV	R2, @#<30$+2>
 	ASL	R2
-K02106:	BISB	R2, <K02070+2>
-	BICB	#177747, <K02070+3>
-	ASRB	<K02070+3>
-	ASRB	<K02070+3>
-	ASRB	<K02070+3>
-	MOV	<K02070+2>, R2
-	ASL	R2
-	ASL	R2
-	MOV	R2, <K02070+2>
-	ASL	R2
-	ASL	R2
-	ADD	<K02070+2>, R2
-	NOP1	;ASL	R4
-	ADD	R4, R2
-	ADD	#100000, R2		; R2 = screen address
-	ASR	R4
+	ASL	R2			; R2 = Y * 640.
+30$:	ADD	#000000, R2		; R2 = Y * 800.
+	ADD	R4, R2			; R2 = Y * 800. + X
+	ADD	#100004, R2		; R2 = screen start address
 	RETURN
+	NOP3
+	NOP3
+	NOP3
+;
 K02176:	MOV	#000001, R0		;TODO: not used??
 	RETURN
 ;
@@ -224,7 +226,7 @@ K02202:	MOV	#K41173, R3		; FFCOL
 	MOV	#L26524, K04654		; BUFFO - Front tile screen address
 	MOV	#L25424, R3		; BUFFB - Back tile screen address
 	MOV	#L24324, R2		; BUFFD
-	MOV	#100000, R5		; screen start address
+	MOV	#100004, R5		; screen start address
 	MOV	#L24324, R4		; BUFFD
 K02272:	MOV	#000022, #000000	;!!MUT-2ndARG!!
 ; LOOP1:
@@ -655,8 +657,8 @@ K04274:	MOV	#K04662, R3		; PIX
 	CLR	R0			; #7
 	BISB	(R3)+, R0
 	MOV	R0, (R5)
-	NOP2	;ADD	#120, (R1)
-	NOP1	;MOV	R0, (R5)		; Дублируем нижнюю строку тайла
+	ADD	#120, (R1)
+	MOV	R0, (R5)		; Дублируем нижнюю строку тайла
 	;MOVB	(R3), R0		; get attr
 	POP	R5
 K04440:	INC	R5			; next column
@@ -673,7 +675,7 @@ K04440:	INC	R5			; next column
 	DEC	R1
 	BEQ	K04506
 	JMP	K02304			; => LOOP2
-K04506:	ADD	#001140, R5
+K04506:	ADD	#<800.-32.>, R5
 	DEC	<K02272+4>
 	BEQ	K04632			; Z => RETURN
 	JMP	K02300			; => LOOP1
@@ -735,7 +737,7 @@ K04674:	PUSH	R3
 	MOV	#000005, R1		; 5.
 K04724:	BICB	#177600, (R3)+		; <
 	SOB	R1, K04724		; repeat
-	MOV	#073477, R3		; screen address
+	MOV	#123477, R3		; screen address
 	MOV	#000010, R1
 	MOV	#000017, R0
 	HALT	;MOV	#MMODE5, @#177716	; Включаем режим памяти 5
@@ -769,7 +771,7 @@ K05050:	ASL	R3
 	PUSH	R2
 	ASL	R0
 	MOV	K05254(R0), R2		; get item address
-	MOV	#127602, R3
+	MOV	#136005, R3		; HELD item screen address
 K05100:	ADD	#000000, R3		;!!MUT-ARG!!
 	PUSH	R3
 	MOV	#176640, R5
@@ -1050,7 +1052,7 @@ K11600:	PUSH	R3			;   <
 	INC	R4
 	BIT	#000037, R4
 	BNE	K11626
-	ADD	#001140, R2
+	ADD	#<800.-32.>, R2
 K11626:	SOB	R1, K11600		;   repeat
 	BR	K11516			; repeat
 ; Procedure: Show one tile of the indicator panel
@@ -1058,7 +1060,7 @@ K11632:	PUSH	R2
 	PUSH	R5
 	PUSH	R0
 	MOV	#176640, R5		; Адрес порта адреса косвенной записи УКНЦ
-	MOV	R2, (R5)+
+	MOV	R2, (R5)
 	MOV	#176642, R2		; Адрес порта данных косвенной записи УКНЦ
 	CLR	R0			; #0
 	BISB	(R3)+, R0
@@ -1110,25 +1112,25 @@ K11772:	.BYTE	010,021,004,016,021,016,016,021,005,016,021,004,011,014,022,004
 	.BYTE	023,016,014,005,006,006,006,007,014,022,004,014,014,022,004,014
 	.BYTE	023,016,014,022,005,014,022,004,014,012,021,004,017,021,016,017
 	.BYTE	021,005,017,021,004,013,377
-; PANCR - Indicator panel tiles, 9 bytes each
-K12121:	.BYTE	000,017,020,047,110,120,120,120,017
+; PANCR - Indicator panel tiles, 20 tiles, 9 bytes each
+K12121:	.BYTE	000,360,010,344,022,012,012,012,017
 	.BYTE	000,377,000,377,000,000,000,000,017
-	.BYTE	000,360,010,344,022,012,012,012,017
-	.BYTE	120,120,120,120,120,120,120,120,017
+	.BYTE	000,017,020,047,110,120,120,120,017
 	.BYTE	012,012,012,012,012,012,012,012,017
-	.BYTE	120,120,120,110,047,020,017,000,017
-	.BYTE	000,000,000,000,377,000,377,000,017
+	.BYTE	120,120,120,120,120,120,120,120,017
 	.BYTE	012,012,012,022,344,010,360,000,017
-	.BYTE	000,022,015,333,062,051,044,040,002
-	.BYTE	000,060,100,106,310,260,236,050,002
-	.BYTE	020,031,361,063,057,102,102,004,002
-	.BYTE	036,050,230,330,144,104,042,040,002
-	.BYTE	020,076,110,010,020,174,022,060,002
-	.BYTE	010,052,034,260,340,222,114,030,002
-	.BYTE	000,042,044,107,314,152,222,020,002
-	.BYTE	020,125,135,053,342,042,104,000,002
-	.BYTE	020,036,070,217,022,004,170,014,002
-	.BYTE	000,041,042,372,027,022,042,000,002
+	.BYTE	000,000,000,000,377,000,377,000,017
+	.BYTE	120,120,120,110,047,020,017,000,017
+	.BYTE	000,110,260,333,114,224,044,004,002
+	.BYTE	000,014,002,142,023,015,171,024,002
+	.BYTE	010,230,217,314,364,102,102,040,002
+	.BYTE	170,024,031,033,046,042,104,004,002
+	.BYTE	010,174,022,020,010,076,110,014,002
+	.BYTE	020,124,070,015,007,111,062,030,002
+	.BYTE	000,104,044,342,063,126,111,010,002
+	.BYTE	010,252,272,324,107,104,042,000,002
+	.BYTE	010,170,034,361,110,040,036,060,002
+	.BYTE	000,204,104,137,350,110,104,000,002
 	.BYTE	000,000,000,000,000,000,000,000,017
 	.BYTE	377,377,377,377,377,377,377,377,012
 ; PANMS - Indicator signs
@@ -5442,14 +5444,14 @@ L13115:	.ASCII	/UP   /
 
 ; Keyboard selected in Menu
 L13146:	CALL	L13424			; NOCOL Clear Menu selection
-	MOV	#054202, R3
+	MOV	#040202, R3
 	CLR	R0			; input method = 0
 ;NOTE: Protek убран - не нужно на БК
 L13176:	CALL	L13464			; SETCOL Show Menu selection
 	JMP	L11464			; Continue to Menu
 ; Joystick selected
 L13206:	CALL	L13424			; NOCOL Clear Menu selection
-	MOV	#054302, R3
+	MOV	#040302, R3
 	MOV	#000001, R0		; input method = 1
 	BR	L13176			; Show Menu selection and Continue to Menu
 ;
@@ -5461,20 +5463,13 @@ L13224:	CALL	L13242			; calculate screen attr address
 ;
 ; Procedure: ??? Calculate screen attr address
 L13242:	MOV	R2, #000000		;!!MUT-ARG!!
-	BIC	#176037, R2		; keep bits: 001111100000
-	PUSH	R2
-	ASL	R2
-	ASR	(SP)
-	ADD	(SP), R2
-	ASL	R2
-	ASL	R2
-	ASL	R2			; *8
-	MOV	<L13242+2>, (SP)
-	BIC	#177740, (SP)		; 0..31.
-	NOP1	;ASL	(SP)
-	ADD	(SP)+, R2
-	ADD	#100000, R2		; screen attr address
-	RETURN
+	JMP	K02056			; Используем процедуру для не-атрибутов
+	NOP3
+	NOP3
+	NOP3
+	NOP3
+	NOP3
+	NOP1
 ;
 ; Procedure: Set attributes for 8x8 block; R0 = attribute, R2 = screen address
 L13312:	HALT	;MOV	#MMODE5, @#177716	; Включаем режим памяти 5
@@ -5503,7 +5498,7 @@ L13312:	HALT	;MOV	#MMODE5, @#177716	; Включаем режим памяти 5
 ; NOCOL procedure: Clear Menu selection
 L13424:	CLR	R0			; filler = 0
 ; BRGO1:
-L13430:	MOV	#054202, R2		; !!MUT-ARG!! screen coords
+L13430:	MOV	#040202, R2		; !!MUT-ARG!! screen coords
 	CALL	L13242			; calc screen addr
 	ADD	#001200, R2
 	MOV	#000015, R1		; 13.
