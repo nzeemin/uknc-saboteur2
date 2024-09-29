@@ -578,7 +578,7 @@ K04114:	NOP		;!!MUT-CMD!! "NOP" command or "MOVB R0,(R3)" command
 	ASL	R3
 	ASL	R3			; *8.
 	CMPB	R0, #000345		; compare to 229.
-	BHIS	K04526			; => BUFWR
+	BHIS	K04526			; > 229. => BUFWR
 	ASL	R3
 	ADD	R1, R3			; *17.
 	ADD	#K41342, R3		; + OCHRS
@@ -719,7 +719,7 @@ K04652:	.WORD	0			; NINPT: Address in Ninja tile screen
 K04654:	.WORD	0			; OBJPT: Address in Front tile screen
 K04656:	.WORD	0			; GD1PT: Address in Enemy 0 tile screen
 K04660:	.WORD	0			; GD2PT: Address in Enemy 1 tile screen
-;
+; PIX:
 K04662:	.BLKB	10			; PIX
 ;
 K04672:	.BYTE	2			; COL
@@ -1190,7 +1190,7 @@ K12514:	MOVB	#060, (R3)+		; <
 	CLRB	K37662			; set SPEED = 0
 	CLRB	K36264			; set DIR = 0
 	MOV	#000240, K04114		; set NOP command
-	MOV	#070613, <K13332+2>	; MAP-15 address -> RM+1
+	MOV	#<K70632-15.>, <K13332+2>	; MAP-15 address -> RM+1
 	INCB	R0			; R0 = 1
 	MOVB	R0, <L14534+2>		; set (NRGPX+1) = 1
 	MOVB	R0, <L14472+2>		; set (DECEN+1) = 1
@@ -1296,7 +1296,7 @@ K13426:	.WORD	K20120		; $00 000 - HORLN - Fill horizontally W with tile
 	.WORD	K24104		; $02 002 - BLOCK - Fill rectangle WxH with tile
 	.WORD	K17762		; $03 003 - FILLB - Fill the whole room with tile
 	.WORD	K20022		; $04 004 - ONECR - Fill one tile
-	.WORD	K16024		; $05 005 - RKTPP - Rocket upper part
+	.WORD	K16024		; $05 005 - RKTTP - Rocket upper part
 	.WORD	K20136		; $06 006 - DIAGR - Fill diagonally right-down
 	.WORD	K20144		; $07 007 - DIAGL - Fill diagonally left-down
 	.WORD	K20260		; $08 010 - LADSK - Ladder
@@ -1641,21 +1641,21 @@ K16012:	.BYTE	315,000,000
 	.BYTE	317,317,315
 	.EVEN
 ;
-; Room marker $05 005 - RKTPP - Rocket upper part 3x4 tiles
-K16024:	MOV	#070616, R4		; copy from
+; Room marker $05 005 - RKTTP - Rocket upper part 3x4 tiles
+K16024:	MOV	#070616, R4		; copy from ROKET
 	MOVB	#003, K01604		; width = 3
 	MOV	#000004, R1		; height = 4
 	MOV	#062334, R3		; BUFFB+144.
 	BR	K16432			; Copy tiles
 	NOP1
-; Object in tiles, 5x3 tiles
+; LFTRC: Object in tiles, 5x3 tiles
 K16052:	.BYTE	001,037,040,036,036
 	.BYTE	041,036,036,036,036
 	.BYTE	001,042,043,044,044
-; Object in tiles, 3x2 tiles
-K16071:	.BYTE	047,050,051,036,052,053
+; RTTRC: Object in tiles, 3x2 tiles
+K16071:	.BYTE	047,050,051, 036,052,053
 	.EVEN
-; Room marker $20 040 - ??? 3x2 tiles
+; Room marker $20 040 - RTTRE 3x2 tiles
 K16100:	MOV	#K16071, R4		; copy from
 	MOV	#000003, R2		; width = 3
 	MOV	#000002, R1		; height = 2
@@ -1690,7 +1690,7 @@ K16234:	MOV	(SP), R0
 	MOVB	(R0), K01611		; offset high
 	MOV	R0, (SP)
 	MOV	K01610, R3		; get offset
-	ADD	#K43310, R3		; + base address tiles for current room
+	ADD	#043310, R3		; + base address
 K16260:	PUSH	R2			; <
 	PUSH	R3
 K16264:	MOVB	(R4)+, (R3)+		; | <
@@ -1731,7 +1731,7 @@ K16400:	MOV	#062245, R3
 	MOV	#000002, R1
 ; Entry point: Copy tiles; K01604 = width, R1 = height, R4 = address to copy from
 K16432:	MOV	#000040, R2		; 32. = row width
-	ADD	#K43310, R3		; + base address tiles for current room
+	ADD	#043310, R3		; + base address
 	PUSH	R5
 K16444:	MOVB	K01604, R5		; < width  !!MUT-ARG!!
 	PUSH	R3
@@ -1908,17 +1908,17 @@ K20022:	POP	R3
 	MOVB	(R3), K01607
 	PUSH	R3
 	MOV	K01606, R3
-	ADD	#K43310, R3		; + base address tiles for current room
+	ADD	#043310, R3		; + base address
 	MOVB	R0, (R3)
 	JMP	K13422
 ; Room marker $0F 017 - TLDTN
-K20056:	MOV	#000312, R0
+K20056:	MOV	#000312, R0		; 202.
 	POP	R3
 	MOVB	(R3)+, K01606
 	MOVB	(R3), K01607
 	PUSH	R3
 	MOV	K01606, R3
-	ADD	#K43310, R3		; + base address tiles for current room
+	ADD	#043310, R3		; + base address
 	MOVB	R0, (R3)+
 	INCB	R0
 	MOVB	R0, (R3)
@@ -1947,7 +1947,7 @@ K20156:	POP	R0
 	MOVB	(R0), K01611		; get offset hi
 	PUSH	R0
 	MOV	K01610, R3		; offset
-	ADD	#K43310, R3		; + base address tiles for current room
+	ADD	#043310, R3		; + base address
 	MOVB	K01604, R0		; tile
 K20216:	MOVB	R0, (R3)		; < put tile
 	ADD	R2, R3			; | + offset
@@ -1972,7 +1972,7 @@ K20266:	MOV	#000037, R2		; 31.
 	PUSH	R0
 	MOVB	(R0), K01611		; get offset hi
 	MOV	K01610, R3		; offset
-	ADD	#K43310, R3		; + base address tiles for current room
+	ADD	#043310, R3		; + base address
 	MOVB	K01604, R0		; get tile
 K20326:	MOVB	R0, (R3)+		; < put tile
 	INCB	R0			; | next tile
@@ -2042,7 +2042,7 @@ K24010:	MOV	R3, <K24062+2>		; set (DIBLD+1)
 	PUSH	R0
 	MOVB	(R0), K01611
 	MOV	K01610, R3
-	ADD	#K43310, R3		; + base address tiles for current room
+	ADD	#043310, R3		; + base address
 K24050:	PUSH	R2			; <
 	PUSH	R3
 K24054:	MOVB	R5, (R3)+
@@ -2065,7 +2065,7 @@ K24104:	POP	R0			;
 	PUSH	R0
 	MOVB	(R0), K01611		; get offset high
 	MOV	K01610, R3		; offset
-	ADD	#K43310, R3		; + base address tiles for current room
+	ADD	#043310, R3		; + base address
 K24142:	PUSH	R2			; <
 	PUSH	R3
 K24146:	MOVB	R5, (R3)+		; | <  put one tile
@@ -2154,7 +2154,7 @@ K24446:	CMPB	K36214, (R4)		; <  check RMDN room level
 	MOVB	000002(R4), K01610
 	MOVB	000003(R4), K01611
 	MOV	K01610, R3
-	ADD	#K43310, R3		; + base address tiles for current room
+	ADD	#043310, R3		; + base address
 	MOVB	(R3), R0
 	INCB	R0
 	BNE	K24530
@@ -2300,20 +2300,21 @@ K25276:	CALL	K36266			; MANDR
 K25354:	BNE	K25362
 	CALL	L14472			; DECEN
 ; NDRON:
-K25362:	MOVB	077520, R0
+K25362:	MOVB	K77520, R0		; get GLGP1
 	INCB	R0
 	BIC	#177774, R0
-	MOVB	R0, 077520
+	MOVB	R0, K77520
 	ASL	R0
-	MOV	077506(R0), 077516
+	MOV	K77506(R0), K77516
 	MOVB	K77530, R0		; get DLGP1
 	INCB	R0
 	CMPB	R0, #003
 	BNE	K25426
 	CLR	R0
+; GYGYU:
 K25426:	MOVB	R0, 077530
 	ASL	R0
-	MOV	077522(R0), R3
+	MOV	K77522(R0), R3		; DLGTB
 	MOV	R3, <K27556+2>
 	MOV	#033543, R4
 	MOV	#000145, R1
@@ -2626,7 +2627,7 @@ K27316:	MOVB	K36264, R0		; get DIR
 	NOP1
 ; NGTRO:
 K27454:	CALL	K27566			; TURNQ
-K27460:	MOV	077516, R3
+K27460:	MOV	K77516, R3
 	JMP	K30450			; => ENDGP
 ;
 K27470:	MOV	#127672, R3
@@ -2690,7 +2691,7 @@ K27734:	DECB	(R3)
 	BNE	K27744
 	CLRB	000013(R4)
 ; LEEEE:
-K27744:	MOV	#076606, R3		; GDPNC
+K27744:	MOV	#K76606, R3		; GDPNC
 	JMP	K30450			; => ENDGP
 ; FFIRE:
 K27754:	.BYTE	243, 244
@@ -2745,7 +2746,7 @@ K30174:	INCB	R5
 K30200:	DECB	K26670
 	BNE	K30214
 	MOVB	#007, 000013(R4)
-K30214:	MOV	#076606, R3
+K30214:	MOV	#K76606, R3		; GDPNC
 	BR	K30450
 ;
 K30222:	MOVB	#000010, 000013(R4)
@@ -2783,22 +2784,23 @@ K30324:	MOV	#K26670, R3
 	CALL	L15650			; Sound CRUNCH noise
 	MOV	#000007, R1
 	CALL	L14472			; DECEN
+; NUN25:
 K30366:	POP	R3
 K30370:	DECB	(R3)
 	BNE	K30400
 	CLRB	000013(R4)
-K30400:	MOV	#077333, R3
+K30400:	MOV	#077333, R3		; GKIKC
 	BR	K30450
 ; GDLLP:
 K30406:	MOVB	#003, 000013(R4)
-	MOV	#076657, R3
+	MOV	#K76657, R3		; GDLLC
 	BR	K30450
 ;
 K30422:	CALL	L15650			; Sound CRUNCH noise
 	MOVB	#006, R1		; 6.
 	CALL	L14472			; DECEN
 	MOVB	#001, 000013(R4)
-	MOV	#076757, R3
+	MOV	#076757, R3		; DOGL2
 ; ENDGP:
 K30450:	MOV	R3, <K30534+2>
 	MOV	#036037, R3
@@ -3706,15 +3708,14 @@ K40272:	JMP	K25276			; => ENDVC
 ;
 K40276:	.WORD	0			; GLIPS
 K40300:	.BYTE	0			; GLIDN
-; GLIDC:
-K40301:	.BYTE	377
-	.BYTE	377, 377, 377, 105, 106, 107, 110, 111, 112, 377
-	.BYTE	113, 114, 115, 116, 117, 120, 121, 122, 123, 377
-	.BYTE	377, 124, 125, 126, 127, 130, 131, 132, 133, 134
-	.BYTE	135, 377, 377, 377, 377, 136, 137, 377, 140, 141
-	.BYTE	377, 377, 377, 000
+; GLIDC: Glider 4x11 tiles
+K40301:	.BYTE	377,377,377,377,105,106,107,110,111,112,377
+	.BYTE	113,114,115,116,117,120,121,122,123,377,377
+	.BYTE	124,125,126,127,130,131,132,133,134,135,377
+	.BYTE	377,377,377,136,137,377,140,141,377,377,377
+	.BYTE	000
 ;
-; DRGLI procedure: Draw glider; R1 = addr in tile screen, R2 = GLIDC or NINDC
+; DRGLI procedure: Draw glider 4x11 tiles; R1 = addr in tile screen, R2 = GLIDC or NINDC
 K40356:	MOV	#K40276, 047720		; GLIPS addr -> (HELP1+1)
 	MOV	K40276, R3		; get GLIPS
 	ADD	R1, R3
@@ -3894,10 +3895,6 @@ K41305:	.BYTE	070, 001, 010		; '8' - up
 ;
 ;K41342:
 .INCLUDE /S242E2.MAC/
-;
-; Room tiles for the current room
-;K43310:
-.INCLUDE /S246C8.MAC/
 ;
 ; BUFCL procedure: Fill Ninja tile screen
 K46120:	MOV	#L27624, R3		; BUFFN Ninja tile screen address
@@ -4513,7 +4510,7 @@ K53456:	CMPB	R0, #000324		; == 212. ?
 	CALL	L10300			; MONYP - Print MONEY
 	MOV	#054774, R3		; LIFTU address
 	JMP	K55252			; => SETV2 - set vector
-; LIFTU:
+; NLFTU:
 K53512:	MOVB	050156, R0		; get (MANBF+38.)
 	TSTB	K36264			; check DIR
 	BEQ	K53530
@@ -5145,7 +5142,7 @@ L11054:	MOV	#000013, R1		; 11.
 	MOV	#040143, R2
 	CALL	K01704			; PRINT string
 	MOV	#L14017, R3		; score table address
-	MOV	#K40301, R2
+	MOV	#040301, R2		; screen coords
 	PUSH	R4
 	MOV	#000017, R4		; 15.
 L11112:	PUSH	R2			; <
