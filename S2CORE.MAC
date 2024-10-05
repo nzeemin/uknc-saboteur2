@@ -789,41 +789,41 @@ K04674:	PUSH	R3
 	MOV	#000005, R1		; 5.
 K04724:	BICB	#177600, (R3)+		; <
 	SOB	R1, K04724		; repeat
-;TODO: Не понял что это, изменение 4-х атрибутов, для чего?
-	MOV	#123477, R3		; screen address
-	MOV	#000010, R1
-	MOV	#000017, R0		; attr?
-	NOP3	;MOV	#MMODE5, @#177716	; Включаем режим памяти 5
-	NOP3
-K04762:	NOP1	;MOVB	R0, (R3)+		; <
-	NOP1	;INC	R3
-	NOP1	;MOVB	R0, (R3)+
-	NOP1	;INC	R3
-	NOP1	;MOVB	R0, (R3)+
-	NOP1	;INC	R3
-	NOP1	;MOVB	R0, (R3)+
-	NOP1	;INC	R3
-	NOP2	;ADD	#000070, R3
-	SOB	R1, K04762		; repeat
-	NOP3	;MOV	#MMODE1, @#177716	; Включаем режим памяти 1
-	NOP3
+	CALL	XRNEAR			; Invert NEAR sign
 	CALL	L10300			; MONYP - Print MONEY
 	CLR	R0
-K05032:	MOV	#000032, R3
-	BR	K05050
+K05032:	MOV	#000032, R3		; 26. = shift from HOLD to NEAR item indicator
+	BR	K05050			; draw NEAR item
+; Invert 4-char NEAR sign
+XRNEAR:
+	MOV	#<SCRTOP+<220.*80.>+27.>, R3	; screen address for NEAR
+	MOV	#000012, R1		; char height
+	MOV	#000377, R0		; XOR mask
+	MOV	R3, @#176640	; УКНЦ косвенный адрес
+K04762:	XOR	R0, @#176642	; УКНЦ	; <
+	INC	@#176640
+	XOR	R0, @#176642
+	INC	@#176640
+	XOR	R0, @#176642
+	INC	@#176640
+	XOR	R0, @#176642
+	ADD	#<80.-3>, @#176640
+	SOB	R1, K04762		; repeat
+	RETURN
+	NOP3
+	NOP2
 ; HLDOD procedure
 K05040:	MOVB	K33464, R0		; get HELD value
 	PUSH	R3
 	CLR	R3
-K05050:	ASL	R3
-	MOV	R3, <K05100+2>
+; TEACH: draw HELD or NEAR item; R0 = item number; R3 = 000 for HELD, 026 for NEAR
+K05050:
 	BIC	#177600, R0		; 0..177
 	PUSH	R1
 	PUSH	R2
 	ASL	R0
 	MOV	K05254(R0), R2		; get item address
-	MOV	#<SCRTOP+<192.*80.>+1>, R3	; HELD item screen address
-K05100:	ADD	#000000, R3		;!!MUT-ARG!!
+	ADD	#<SCRTOP+<192.*80.>+1>, R3	; HELD item screen address + offset
 	PUSH	R3
 	MOV	#176640, R5
 	MOV	R3, (R5)		; косвенный адрес
@@ -848,28 +848,13 @@ K05126:	CLR	R3			; <
 	POP	R3
 	INC	R3
 	MOV	#000003, R5
-K05164:	;MOV	#000010, R1		; <
-K05170:	;MOV	R2, R4			;   <
-	;MOVB	(R2)+, (R3)+
-	;INC	R3
-	;MOVB	(R2)+, (R3)+
-	;INC	R3
-	;MOVB	(R2)+, (R3)+
-	;INC	R3
-	;MOVB	(R2)+, (R3)+
-	;INC	R3
-	;ADD	#000070, R3
-	;MOV	R4, R2
-	;SOB	R1, K05170		;   repeat
-	;ADD	#000004, R2
-	;SOB	R5, K05164		; repeat
-	NOP3
+K05164:
 	POP	R2
 	POP	R1
 	POP	R3
 	RETURN
 
-	.BLKW	11	;NOTE: Свободное место
+	.BLKW	14	;NOTE: Свободное место
 ;
 ; Table of addrs: Nothing, Shuriken, Knife, Empty Box, Question, Pipe, Question, Wrench
 K05254:	.WORD	K05274, K05450, K05624, K06000, K06154, K06504, K06154, K06330
@@ -4210,18 +4195,19 @@ K51216:	MOVB	K23750, R0		; get TEMPN
 	BPL	K51300
 	BIC	#177600, R0		; 0..177
 	PUSH	R0
-	MOV	#055333, R2		; screen coords
-	MOVB	#004, R1		; 4. rows
-	MOV	#000217, R0
-K51246:	CALL	L13224			; <  calc screen attr address and set attrs for 8x8 block
-	INC	R2
-	SOB	R1, K51246		; repeat
+	NOP2	;MOV	#055333, R2		; screen coords
+	NOP2	;MOVB	#004, R1		; 4. cols
+	NOP2	;MOV	#000217, R0
+K51246:	NOP2	;CALL	L13224			; <  calc screen attr address and set attrs for 8x8 block
+		;INC	R2
+		;SOB	R1, K51246		; repeat
+	CALL	XRNEAR
 	MOV	#K50764, R3		; "STASH SEARCHED"
 	MOV	#000016, R1		; 14.
 	MOV	#050146, R2		; screen coords
 	CALL	K01704			; PRINT string "STASH SEARCHED"
 	POP	R0
-K51300:	CMPB	R0, #000003
+K51300:	CMPB	R0, #003
 	BNE	K51310
 	CLR	R0
 K51310:	MOVB	R0, K33464		; clear HELD value
@@ -5504,13 +5490,13 @@ L13115:	.ASCII	/UP   /
 
 ; Keyboard selected in Menu
 L13146:	CALL	L13424			; NOCOL Clear Menu selection
-	MOV	#040202, R3
+	MOV	#040202, R3		; screen coords for Keyboard sign
 	CLR	R0			; input method = 0
 L13176:	CALL	L13464			; SETCOL Show Menu selection
 	JMP	L11464			; Continue to Menu
-; Joystick selected
+; Joystick selected in Menu
 L13206:	CALL	L13424			; NOCOL Clear Menu selection
-	MOV	#040302, R3
+	MOV	#040302, R3		; screen coords for Joystick sign
 	MOV	#000001, R0		; input method = 1
 	BR	L13176			; Show Menu selection and Continue to Menu
 ;
@@ -5532,11 +5518,11 @@ L13242:	MOV	R2, #000000		;!!MUT-ARG!!
 ;
 ; Procedure: Set attributes for 8x8 block; R0 = attribute, R2 = screen address
 L13312:
-	MOV	R2, @#176640		; УКНЦ
-	MOVB	R0, @#176642		; #0
+	MOV	R2, @#176640	; УКНЦ
+	XOR	R0, @#176642		; #0
 	ADD	#<120*7>, R2
-	MOV	R2, @#176640		; УКНЦ
-	MOVB	R0, @#176642		; #0
+	MOV	R2, @#176640	; УКНЦ
+	XOR	R0, @#176642		; #7
 	RETURN
 	NOP3
 	NOP3
