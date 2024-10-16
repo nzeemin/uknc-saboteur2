@@ -258,40 +258,39 @@ K02056:	MOV	R2, R4
 	ADD	R4, R2			; R2 = Y * 800. + X
 	ADD	#SCRTOP, R2		; R2 = screen start address
 	RETURN
-	NOP3
-	NOP3
-	NOP3
 ;
-K02176:	MOV	#000001, R0		;TODO: not used??
-	RETURN
+	.BLKW	52	;NOTE: Свободное место
 ;
 ; DOPIC procedure: Show the room on the screen
 K02202:	MOV	#K41173, R3		; FFCOL
 	MOVB	(R3), R5		; get FFCOL
 	MOV	#000004, R0
 	XOR	R0, R5			; XOR 4
-	MOVB	R5, (R3)+
-	CLRB	(R3)
-	MOV	#L27624, K04652		; BUFFN - Ninja tile screen address
-	MOV	#L30724, K04656		; BUFG1 - Enemy 0 tile screen address
-	MOV	#L32024, K04660		; BUFG2 - Enemy 1 tile screen address
-	MOV	#L26524, K04654		; BUFFO - Front tile screen address
-	MOV	#L25424, R3		; BUFFB - Back tile screen address
-	MOV	#L24324, R2		; BUFFD
+	MOVB	R5, (R3)+		; set FFCOL; R3 = FFCOL+1
+	CLRB	(R3)			; clear (FFCOL+1)
+	CLR	R2			; R2 = index in all the buffers
 	MOV	#SCRTOP, R5		; screen start address
-	MOV	R2, R4			; BUFFD
-K02272:	MOV	#000022, #000000	;!!MUT-2ndARG!! 18. rows
+	MOV	#L24324, R4		; BUFFD
+K02272:
 ; LOOP1: loop by rows
-K02300:	MOV	#000040, #000000	;!!MUT-2ndARG!! 32. columns
+K02300:
 ; LOOP2: loop by columns along the row
-K02304:
-	PUSH	R3			; save addr in BUFFB
-	PUSH	R2			; save addr in BUFFD
-	MOVB	(R4), R0
-	BNE	K02322
-	JMP	K04440			; => NDRAW
-K02322:	CLR	R0
-	BISB	(R3), R0		; get tile from BUFFB: Back tile screen
+K02304:	TSTB	(R4)			; check byte in BUFFD
+	BNE	K02322			; drawing this tile =>
+; NDRAW: proceed to the next tile
+K04440:	INC	R5			; next column
+	INC	R2			; next index
+	INC	R4
+	BIT	#31., R2		; end of row?
+	BNE	K02304			; not end of row => LOOP2
+	ADD	#<800.-32.>, R5		; next row
+	CMP	R2, #576.		; end of buffers?
+	BNE	K02300			; => LOOP1
+	RETURN				; DOPIC finished
+; Drawing the tile, start with the background
+K02322:	PUSH	R2			; save index
+	CLR	R0
+	BISB	L25424(R2), R0		; get tile from BUFFB: Back tile screen
 	MOVB	R0, <K04673>		; set BAKCR
 	MOV	R0, R3
 	ASL	R3
@@ -308,13 +307,14 @@ K02322:	CLR	R0
 	MOVB	(R3)+, (R2)+
 	MOVB	(R3)+, (R2)+
 	MOVB	(R3)+, (R2)+		; Copied tile pixels to PIX buffer
-	NOP1	;MOVB	(R3)+, (R2)+		; attr
 	CLRB	K41174			; clear FFCOL+1
+	MOV	(SP), R2		; restore index
 	CLR	R0
-	BISB	@K04656, R0		; get tile from Enemy 0 tile screen
+	BISB	L30724(R2), R0		; get tile from Enemy 0 tile screen
 	MOV	R0, R3
 	INCB	R0
 	BEQ	K03014			; => GRD2
+; Draw guard tile
 	CLRB	R1
 	CMPB	R0, #000244
 K02426:	BLO	K02450			; => FFCL2
@@ -406,8 +406,9 @@ K02450:	BICB	#177407, K04672		; COL
 	BISB	R0, (R2)+
 	CALL	K36042			; G1DIS
 ; GRD2:
-K03014:	CLR	R3
-	BISB	@K04660, R3		; get tile from Enemy 1 tile screen
+K03014:	MOV	(SP), R2		; restore index
+	CLR	R3
+	BISB	L32024(R2), R3		; get tile from Enemy 1 tile screen
 	CMP	R3, #377		; tile 255. ?
 	BEQ	K03364			; yes => NINJA
 	BICB	#177407, K04672		; COL := COL AND 248.
@@ -492,9 +493,10 @@ K03014:	CLR	R3
 	CALL	K36056			; G2DIS
 ; NINJA:
 K03364:	MOVB	K03542, K41175		; save (NJCOL+1) to TMPNC
-	CLR	R3
-	MOVB	@K04652, R0		; get tile from BUFFN: Ninja tile screen
-	BISB	R0, R3
+	MOV	(SP), R2		; restore index
+	CLR	R0
+	BISB	L27624(R2), R0		; get tile from BUFFN: Ninja tile screen
+	MOV	R0, R3
 	INCB	R0
 	BNE	K03412
 	JMP	K04104			; 0 => OBJDA
@@ -520,7 +522,7 @@ K03462:	MOVB	K04673, R0		; get BAKCR
 	BHIS	K03516			; => OBJD
 	MOVB	<L14472+2>, R0		; get (DECEN+1)
 	BEQ	K03516			; => OBJD
-	MOVB	#001, K36216		; set ELECU = 1
+	MOVB	#001, K36216		; set ELECU = 1: electroshocked
 ; OBJD:
 K03516:	MOVB	K41174, R0		; get (FFCOL+1)
 	BEQ	K03544			; => HYPN2
@@ -619,7 +621,8 @@ K04104:	MOV	#K04672, R3		; get COL
 	MOV	#000020, R0		; 16.
 ; COLRD:
 K04114:	NOP		;!!MUT-CMD!! "NOP" command or "MOVB R0,(R3)" command
-	MOVB	@K04654, R0		; get tile from Front tile screen
+	MOV	(SP), R2		; restore index
+	MOVB	L26524(R2), R0		; get tile from Front tile screen
 	CLR	R3
 	BISB	R0, R3			; get byte
 	INCB	R0			; == 255. ?
@@ -695,25 +698,9 @@ K04274:	MOV	#K04662, R3		; PIX buffer address
 	MOV	R0, (R5)
 	ADD	#120, (R1)
 	MOV	R0, (R5)		; Дублируем нижнюю строку тайла
-	;MOVB	(R3), R0		; get attr
 	POP	R5
-K04440:	INC	R5			; next column
-	INC	K04652			; next addr in BUFFN: Ninja tile screen
-	INC	K04656			; next addr in Enemy 0 tile screen
-	INC	K04660			; next addr in Enemy 1 tile screen
-	INC	K04654			; next addr in Front tile screen
-	POP	R2			; restore addr in BUFFD
-	POP	R3			; restore addr in BUFFB
-	INC	R2			; next addr in BUFFD
-	INC	R3			; next addr in BUFFB
-	INC	R4
-	DEC	<K02300+4>		; decrement column counter
-	BEQ	K04506			; end of row?
-	JMP	K02304			; no => LOOP2
-K04506:	ADD	#<800.-32.>, R5		; next row
-	DEC	<K02272+4>		; decrement row counter
-	BEQ	K04632			; Z => loop finished, RETURN
-	JMP	K02300			; => LOOP1
+	POP	R2			; restore index
+	JMP	K04440			; => NDRAW
 ;
 ; BUFWR:
 K04526:	ADD	#<L16014-1568.>, R3	; + computerized font base address
@@ -731,8 +718,6 @@ K04544:	MOV	#K04662, R2		; PIX buffer address
 	MOVB	(R3)+, (R2)+		; Copied char pixels to PIX buffer
 	;MOVB	#060, (R2)		;NOTE: Атрибут, не нужно на БК/УКНЦ
 	BR	K04274			; => DRAW
-	NOP2
-	NOP3
 ;
 ; BUFOM procedure: Draw string as tiles; R2 = string, R1 = length
 K04604:	MOV	R1, R5
@@ -752,16 +737,13 @@ K04634:	TSTB	K36264			; check DIR
 	MOVB	L23024(R1), R0		; byte mirroring
 K04650:	RETURN
 ;
-K04652:	.WORD	0			; NINPT: Address in Ninja tile screen
-K04654:	.WORD	0			; OBJPT: Address in Front tile screen
-K04656:	.WORD	0			; GD1PT: Address in Enemy 0 tile screen
-K04660:	.WORD	0			; GD2PT: Address in Enemy 1 tile screen
 ; PIX:
 K04662:	.BLKB	10			; PIX
-	NOP3
 ;
 K04672:	.BYTE	2			; COL
 K04673:	.BYTE	0			; BAKCR
+;
+	.BLKW	14	;NOTE: Свободное место
 ;
 ; NERDR procedure: Update NEAR indicator
 K04674:	PUSH	R3
